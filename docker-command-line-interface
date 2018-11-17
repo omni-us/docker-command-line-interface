@@ -1,0 +1,152 @@
+#!/bin/bash
+
+##
+## @version $Version: 2018.11.17$
+## @author Mauricio Villegas <mauricio@omnius.com>
+## @copyright Copyright(c) 2018-present, Mauricio Villegas <mauricio@omnius.com>
+## @license MIT License
+##
+
+set -u;
+
+FN="docker-command-line-interface";
+VERSION="Version: 2018.11.17";
+
+GID=$(id -G | awk -v dg=$(stat -c "%g" .) '{ id=$1; for(n=2;n<=NF;n++) if($n==dg) id=dg; print id; }');
+RUN_USER=$(id -u):$GID;
+DPATH="";
+
+### Tool usage message ###
+tool_usage () {
+  echo "
+$VERSION
+
+DESCRIPTION
+===========
+
+  This is a simple script intended to ease the execution from the command line of
+  commands inside docker containers. It makes the execution behave mostly like any other host command. The main characteristics are:
+  - Automatic access to user files in the host.
+  - Generated files owned by the current user.
+  - Support input from stdin and redirection of stderr and stdout.
+  - Support of complex command arguments, e.g. spaces, quotes, etc.
+
+  The basic system requirement is that docker must be installed and configured to
+  not require sudo.
+
+  A new container is created for each call to docker-command-line-interface and when
+  execution finishes the container is automatically removed. The
+  command is executed as the current user from the current working directory.
+  Executed commands will only work if it is executed from and referencing only
+  files in the host's /Users, /home, /mnt, /media or /tmp directories.
+
+  The interface can also be used to execute external scripts inside the container.
+  For this to work, the script must be located in a directory accessible
+  to the container (see above) and be in your \$DPATH environment variable or be
+  referenced with its full or relative path.
+
+
+SYNOPSIS
+========
+
+  $FN [OPTIONS] -- DOCKER_IMAGE bash  
+  $FN [OPTIONS] -- DOCKER_IMAGE COMMAND ARGUMENTS
+
+
+OPTIONS
+=======
+
+  --user UID:GID            (default: current user and current directory's group)  
+  --runtime=DOCKER_RUNTIME  (e.g. nvidia)  
+  --ipc=DOCKER_IPC          (e.g. host)  
+  --publish=LIST            (e.g. 8080:8080)
+
+  In general most of the options that docker run accepts should work. For more
+  details check docker run --help.
+
+
+EXAMPLES
+========
+
+    # Get the version of some command in the container
+    docker-command-line-interface -- ubuntu:16.04 sed --version
+
+    # Container command as part of a pipe
+    echo 'hello world!' | docker-command-line-interface -- ubuntu:16.04 grep hello | xargs echo
+
+    # Create files in container
+    echo 'hello world!' | docker-command-line-interface -- ubuntu:16.04 tee test.txt
+    ls -l test.txt
+    rm test.txt
+
+    # Use of nvidia GPU in container
+    docker-command-line-interface --runtime=nvidia -- nvidia/cuda:8.0-cudnn5-devel-ubuntu16.04 nvidia-smi
+
+    # Run a jupyter notebook in container
+    docker-command-line-interface --publish=8888:8888 -- DOCKER_IMAGE bash
+    export HOME=$(pwd)
+    jupyter notebook --ip 0.0.0.0 --no-browser
+";
+}
+[ "$#" = 0 ] && tool_usage && exit 0;
+[ "$1" = "--version" ] && echo $(echo $VERSION | sed 's|.* ||') && exit 0;
+
+### Error function ###
+throw_error () { [ "$1" != "" ] && echo "$FN: error: $1"; exit 1; }
+
+### Parse input arguments ###
+OPTS=( run );
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    -h | --help )     tool_usage;               exit 0; ;;
+    -u | --user )     RUN_USER="$2";             shift; ;;
+    -- )              shift;                     break; ;;
+    * )               OPTS+=( "$1" );                   ;;
+  esac
+  shift;
+done
+
+[ "$#" -lt 2 ] && tool_usage && exit 1;
+
+IMAGE="$1";
+shift;
+
+CMD=("$@");
+CMD=("${CMD[@]//$'\x27'/$'\x27\x22\x27\x22\x27'}");
+CMD=("${CMD[@]/#/$'\x27'}");
+CMD=("${CMD[@]/%/$'\x27'}");
+
+### Prepare options for docker ###
+OPTS+=( --user "$RUN_USER" );
+OPTS+=( --rm );
+OPTS+=( --workdir "$(pwd)" );
+OPTS+=( --interactive );
+OPTS+=( --log-driver none );
+if ! ( [ "${#CMD[@]}" = 1 ] && [ "${CMD[0]}" = "'bash'" ] ); then
+  OPTS+=( --env TERM=xterm-256color );
+fi
+[ -d "/Users" ] && OPTS+=( -v /Users:/Users );
+[ -d "/home" ]  && OPTS+=( -v /home:/home );
+[ -d "/mnt" ]   && OPTS+=( -v /mnt:/mnt );
+[ -d "/media" ] && OPTS+=( -v /media:/media );
+[ -d "/tmp" ]   && OPTS+=( -v /tmp:/tmp );
+
+[ "$DPATH" != "" ] && DPATH="PATH=\"$DPATH:\$PATH\" ";
+
+### Run docker ###
+if [ "${#CMD[@]}" = 1 ] && [ "${CMD[0]}" = "'bash'" ]; then
+  [ "$DPATH" != "" ] && DPATH="export $DPATH;";
+  TMP=$(mktemp $FN.init_XXXXXX);
+  echo "
+    $DPATH
+    alias ls='ls --color=auto';
+    rm $TMP;
+    " > $TMP;
+  CMD=( docker "${OPTS[@]}" -t "$IMAGE" \
+    bash --init-file $TMP );
+else
+  CMD=( docker "${OPTS[@]}" "$IMAGE" \
+    bash -c "$DPATH${CMD[*]}" );
+fi
+
+"${CMD[@]}";
