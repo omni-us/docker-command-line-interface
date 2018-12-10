@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ##
-## @version $Version: 2018.11.17$
+## @version $Version: 2018.12.10$
 ## @author Mauricio Villegas <mauricio@omnius.com>
 ## @copyright Copyright(c) 2018-present, Mauricio Villegas <mauricio@omnius.com>
 ## @license MIT License
@@ -10,7 +10,7 @@
 set -u;
 
 FN="docker-command-line-interface";
-VERSION="Version: 2018.11.17";
+VERSION="Version: 2018.12.10";
 
 GID=$(id -G | awk -v dg=$(stat -c "%g" .) '{ id=$1; for(n=2;n<=NF;n++) if($n==dg) id=dg; print id; }');
 RUN_USER=$(id -u):$GID;
@@ -111,10 +111,11 @@ done
 IMAGE="$1";
 shift;
 
+SQ="'";
 CMD=("$@");
-CMD=("${CMD[@]//$'\x27'/$'\x27\x22\x27\x22\x27'}");
-CMD=("${CMD[@]/#/$'\x27'}");
-CMD=("${CMD[@]/%/$'\x27'}");
+CMD=("${CMD[@]//$SQ/$SQ\"$SQ\"$SQ}");
+CMD=("${CMD[@]/#/$SQ}");
+CMD=("${CMD[@]/%/$SQ}");
 
 ### Prepare options for docker ###
 OPTS+=( --user "$RUN_USER" );
