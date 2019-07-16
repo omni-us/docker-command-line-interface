@@ -21,7 +21,7 @@ if [ "${BASH_SOURCE[0]}" != "$0" ]; then
       COMP_LINE="${COMP_WORDS[@]}";
       _docker;
     }
-    complete -F _docker_cli $FN;
+    complete -F _docker_cli ${BASH_SOURCE[0]##*/};
   fi
   return;
 fi
