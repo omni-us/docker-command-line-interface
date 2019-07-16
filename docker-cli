@@ -1,11 +1,14 @@
 #!/bin/bash
 
 ##
-## @version $Version: 2019.04.22$
+## @version $Version: 2019.07.16$
 ## @author Mauricio Villegas <mauricio@omnius.com>
 ## @copyright Copyright(c) 2018-present, Mauricio Villegas <mauricio@omnius.com>
 ## @license MIT License
 ##
+
+FN="${0##*/}";
+VERSION="Version: 2019.07.16";
 
 ### When script is sourced, only enable bash completion by reusing the one from docker ###
 if [ "${BASH_SOURCE[0]}" != "$0" ]; then
@@ -18,22 +21,19 @@ if [ "${BASH_SOURCE[0]}" != "$0" ]; then
       COMP_LINE="${COMP_WORDS[@]}";
       _docker;
     }
-    complete -F _docker_cli docker-command-line-interface;
+    complete -F _docker_cli $FN;
   fi
   return;
 fi
 
 set -u;
 
-FN="docker-command-line-interface";
-VERSION="Version: 2019.04.22";
-
 GID=$(id -G | awk -v dg=$(stat -c "%g" .) '{ id=$1; for(n=2;n<=NF;n++) if($n==dg) id=dg; print id; }');
 RUN_USER=$(id -u):$GID;
 DPATH="";
 
 ### Tool usage message ###
-tool_usage () {
+tool_help () {
   echo "
 $VERSION
 
@@ -52,7 +52,7 @@ DESCRIPTION
   The basic system requirement is that docker must be installed and configured
   to not require sudo.
 
-  A new container is created for each call to docker-command-line-interface and
+  A new container is created for each call to $FN and
   when execution finishes the container is automatically removed. The command is
   executed as the current user from the current working directory. Executed
   commands will only work if it is executed from and referencing only files in
@@ -67,13 +67,13 @@ DESCRIPTION
 INSTALLATION
 ============
 
-  By installation it is meant to make the docker-command-line-interface
+  By installation it is meant to make the $FN
   command runnable from any location. If you cloned the github repository, it is
   recommended that you create a symlink from the clone to any directory in your
   path, i.e.
 
     cd \$HOME/.local/bin
-    ln -s path_to_repo/docker-command-line-interface
+    ln -s path_to_repo/$FN
 
   Copying the script to any directory in your path would also work.
 
@@ -86,14 +86,14 @@ INSTALLATION
   following (adapting to your case):
 
     source /usr/share/bash-completion/completions/docker
-    source \$HOME/.local/bin/docker-command-line-interface
+    source \$HOME/.local/bin/$FN
 
 
 SYNOPSIS
 ========
 
-    $FN [OPTIONS] -- DOCKER_IMAGE bash
     $FN [OPTIONS] -- DOCKER_IMAGE COMMAND ARGUMENTS
+    $FN [OPTIONS] -- DOCKER_IMAGE bash   # Prompt becomes USER_ID@CONTAINER_ID$
 
 
 OPTIONS
@@ -112,27 +112,26 @@ EXAMPLES
 ========
 
     # Get the version of some command in the container
-    docker-command-line-interface -- ubuntu:16.04 sed --version
+    $FN -- ubuntu:16.04 sed --version
 
     # Container command as part of a pipe
-    echo 'hello world!' | docker-command-line-interface -- ubuntu:16.04 grep hello | xargs echo
+    echo 'hello world!' | $FN -- ubuntu:16.04 grep hello | xargs echo
 
     # Create files in container
-    echo 'hello world!' | docker-command-line-interface -- ubuntu:16.04 tee test.txt
+    echo 'hello world!' | $FN -- ubuntu:16.04 tee test.txt
     ls -l test.txt
     rm test.txt
 
     # Use of nvidia GPU in container
-    docker-command-line-interface --runtime=nvidia -- nvidia/cuda:8.0-cudnn5-devel-ubuntu16.04 nvidia-smi
+    $FN --runtime=nvidia -- nvidia/cuda:8.0-cudnn5-devel-ubuntu16.04 nvidia-smi
 
     # Run a jupyter notebook in container
-    docker-command-line-interface --publish=8888:8888 -- DOCKER_IMAGE bash
+    $FN --publish=8888:8888 -- DOCKER_IMAGE bash
     export HOME=\$(pwd)
     jupyter notebook --ip 0.0.0.0 --no-browser
 ";
 }
-[ "$#" = 0 ] && tool_usage && exit 0;
-[ "$1" = "--version" ] && echo $(echo $VERSION | sed 's|.* ||') && exit 0;
+[ "$#" = 0 ] && tool_help && exit 0;
 
 ### Error function ###
 throw_error () { [ "$1" != "" ] && echo "$FN: error: $1"; exit 1; }
@@ -141,7 +140,8 @@ throw_error () { [ "$1" != "" ] && echo "$FN: error: $1"; exit 1; }
 OPTS=( run );
 while [ "$#" -gt 0 ]; do
   case "$1" in
-    -h | --help )     tool_usage;               exit 0; ;;
+    -v | --version )  echo ${VERSION#* };       exit 0; ;;
+    -h | --help )     tool_help;                exit 0; ;;
     -u | --user )     RUN_USER="$2";             shift; ;;
     -- )              shift;                     break; ;;
     * )               OPTS+=( "$1" );                   ;;
@@ -149,7 +149,10 @@ while [ "$#" -gt 0 ]; do
   shift;
 done
 
-[ "$#" -lt 2 ] && tool_usage && exit 1;
+[ "$#" -lt 2 ] &&
+  echo "Error: not enough input arguments." &&
+  echo "Usage: $FN [OPTIONS] -- DOCKER_IMAGE ( COMMAND ARGUMENTS | bash | --help )" &&
+  exit 1;
 
 IMAGE="$1";
 shift;
@@ -185,7 +188,11 @@ if [ "${#CMD[@]}" = 1 ] && [ "${CMD[0]}" = "'bash'" ]; then
   trap _rm_init_tmp EXIT;
   echo "
     $DPATH
-    PS1=\$(id -u)'@\h> ';
+    if [ \$(id -u) = 0 ]; then
+      PS1='root@\h# ';
+    else
+      PS1=\$(id -u)'@\h$ ';
+    fi
     alias ls='ls --color=auto';
     rm $TMP;
     " > $TMP;

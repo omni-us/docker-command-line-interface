@@ -1,5 +1,5 @@
 
-Version: 2019.04.22
+Version: 2019.07.16
 
 DESCRIPTION
 ===========
@@ -16,7 +16,7 @@ DESCRIPTION
   The basic system requirement is that docker must be installed and configured
   to not require sudo.
 
-  A new container is created for each call to docker-command-line-interface and
+  A new container is created for each call to docker-cli and
   when execution finishes the container is automatically removed. The command is
   executed as the current user from the current working directory. Executed
   commands will only work if it is executed from and referencing only files in
@@ -31,13 +31,13 @@ DESCRIPTION
 INSTALLATION
 ============
 
-  By installation it is meant to make the docker-command-line-interface
+  By installation it is meant to make the docker-cli
   command runnable from any location. If you cloned the github repository, it is
   recommended that you create a symlink from the clone to any directory in your
   path, i.e.
 
     cd $HOME/.local/bin
-    ln -s path_to_repo/docker-command-line-interface
+    ln -s path_to_repo/docker-cli
 
   Copying the script to any directory in your path would also work.
 
@@ -50,14 +50,14 @@ INSTALLATION
   following (adapting to your case):
 
     source /usr/share/bash-completion/completions/docker
-    source $HOME/.local/bin/docker-command-line-interface
+    source $HOME/.local/bin/docker-cli
 
 
 SYNOPSIS
 ========
 
-    docker-command-line-interface [OPTIONS] -- DOCKER_IMAGE bash
-    docker-command-line-interface [OPTIONS] -- DOCKER_IMAGE COMMAND ARGUMENTS
+    docker-cli [OPTIONS] -- DOCKER_IMAGE COMMAND ARGUMENTS
+    docker-cli [OPTIONS] -- DOCKER_IMAGE bash   # Prompt becomes USER_ID@CONTAINER_ID$
 
 
 OPTIONS
@@ -76,21 +76,21 @@ EXAMPLES
 ========
 
     # Get the version of some command in the container
-    docker-command-line-interface -- ubuntu:16.04 sed --version
+    docker-cli -- ubuntu:16.04 sed --version
 
     # Container command as part of a pipe
-    echo 'hello world!' | docker-command-line-interface -- ubuntu:16.04 grep hello | xargs echo
+    echo 'hello world!' | docker-cli -- ubuntu:16.04 grep hello | xargs echo
 
     # Create files in container
-    echo 'hello world!' | docker-command-line-interface -- ubuntu:16.04 tee test.txt
+    echo 'hello world!' | docker-cli -- ubuntu:16.04 tee test.txt
     ls -l test.txt
     rm test.txt
 
     # Use of nvidia GPU in container
-    docker-command-line-interface --runtime=nvidia -- nvidia/cuda:8.0-cudnn5-devel-ubuntu16.04 nvidia-smi
+    docker-cli --runtime=nvidia -- nvidia/cuda:8.0-cudnn5-devel-ubuntu16.04 nvidia-smi
 
     # Run a jupyter notebook in container
-    docker-command-line-interface --publish=8888:8888 -- DOCKER_IMAGE bash
+    docker-cli --publish=8888:8888 -- DOCKER_IMAGE bash
     export HOME=$(pwd)
     jupyter notebook --ip 0.0.0.0 --no-browser
 
