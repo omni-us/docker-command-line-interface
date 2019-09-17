@@ -1,5 +1,5 @@
 
-Version: 2019.09.16
+Version: 2019.09.17
 
 DESCRIPTION
 ===========
@@ -87,7 +87,7 @@ EXAMPLES
     rm test.txt
 
     # Use of nvidia GPU in container
-    docker-cli --runtime=nvidia -- nvidia/cuda:8.0-cudnn5-devel-ubuntu16.04 nvidia-smi
+    docker-cli --runtime=nvidia -- nvidia/cuda:10.1-runtime-ubuntu16.04 nvidia-smi
 
     # Run a jupyter notebook in container
     docker-cli --publish=8888:8888 -- DOCKER_IMAGE bash

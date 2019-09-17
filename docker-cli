@@ -1,14 +1,14 @@
 #!/bin/bash
 
 ##
-## @version $Version: 2019.09.16$
+## @version $Version: 2019.09.17$
 ## @author Mauricio Villegas <mauricio@omnius.com>
 ## @copyright Copyright(c) 2018-present, Mauricio Villegas <mauricio@omnius.com>
 ## @license MIT License
 ##
 
 FN="${0##*/}";
-VERSION="Version: 2019.09.16";
+VERSION="Version: 2019.09.17";
 
 ### When script is sourced, only enable bash completion by reusing the one from docker ###
 if [ "${BASH_SOURCE[0]}" != "$0" ]; then
@@ -123,7 +123,7 @@ EXAMPLES
     rm test.txt
 
     # Use of nvidia GPU in container
-    $FN --runtime=nvidia -- nvidia/cuda:8.0-cudnn5-devel-ubuntu16.04 nvidia-smi
+    $FN --runtime=nvidia -- nvidia/cuda:10.1-runtime-ubuntu16.04 nvidia-smi
 
     # Run a jupyter notebook in container
     $FN --publish=8888:8888 -- DOCKER_IMAGE bash
@@ -140,11 +140,11 @@ throw_error () { [ "$1" != "" ] && echo "$FN: error: $1"; exit 1; }
 OPTS=( run );
 while [ "$#" -gt 0 ]; do
   case "$1" in
-    --version )       echo ${VERSION#* };       exit 0; ;;
-    -h | --help )     tool_help;                exit 0; ;;
-    -u | --user )     RUN_USER="$2";             shift; ;;
-    -- )              shift;                     break; ;;
-    * )               OPTS+=( "$1" );                   ;;
+    --version )     echo ${VERSION#* };   exit 0; ;;
+    -h | --help )   tool_help;            exit 0; ;;
+    -u | --user )   RUN_USER="$2";         shift; ;;
+    -- )            shift;                 break; ;;
+    * )             OPTS+=( "$1" );               ;;
   esac
   shift;
 done
@@ -172,6 +172,7 @@ OPTS+=( --log-driver none );
 if ! ( [ "${#CMD[@]}" = 1 ] && [ "${CMD[0]}" = "'bash'" ] ); then
   OPTS+=( --env TERM=xterm-256color );
 fi
+OPTS+=( --entrypoint bash );
 [ -d "/Users" ] && OPTS+=( -v /Users:/Users );
 [ -d "/home" ]  && OPTS+=( -v /home:/home );
 [ -d "/mnt" ]   && OPTS+=( -v /mnt:/mnt );
@@ -197,10 +198,10 @@ if [ "${#CMD[@]}" = 1 ] && [ "${CMD[0]}" = "'bash'" ]; then
     rm $TMP;
     " > $TMP;
   CMD=( docker "${OPTS[@]}" -t "$IMAGE" \
-    bash --init-file $TMP );
+    --init-file $TMP );
 else
   CMD=( docker "${OPTS[@]}" "$IMAGE" \
-    bash -c "$DPATH${CMD[*]}" );
+    -c "$DPATH${CMD[*]}" );
 fi
 
 "${CMD[@]}";
