@@ -1,16 +1,16 @@
 #!/bin/bash
 
 ##
-## @version $Version: 2019.09.17$
+## @version $Version: 2019.09.25$
 ## @author Mauricio Villegas <mauricio@omnius.com>
 ## @copyright Copyright(c) 2018-present, Mauricio Villegas <mauricio@omnius.com>
 ## @license MIT License
 ##
 
 FN="${0##*/}";
-VERSION="Version: 2019.09.17";
+VERSION="Version: 2019.09.25";
 
-### When script is sourced, only enable bash completion by reusing the one from docker ###
+## When script is sourced, only enable bash completion by reusing the one from docker ##
 if [ "${BASH_SOURCE[0]}" != "$0" ]; then
   if [ $(complete -p | grep -c ' -F _docker docker') != 0 ]; then
     _docker_cli () {
@@ -30,9 +30,8 @@ set -u;
 
 GID=$(id -G | awk -v dg=$(stat -c "%g" .) '{ id=$1; for(n=2;n<=NF;n++) if($n==dg) id=dg; print id; }');
 RUN_USER=$(id -u):$GID;
-DPATH="";
 
-### Tool usage message ###
+## Tool usage message ##
 tool_help () {
   echo "
 $VERSION
@@ -60,8 +59,8 @@ DESCRIPTION
 
   The interface can also be used to execute external scripts inside the
   container. For this to work, the script must be located in a directory
-  accessible to the container (see above) and be in your \$DPATH environment
-  variable or be referenced with its full or relative path.
+  accessible to the container (see above) and be in a directory in your \$DPATH
+  environment variable or be referenced with its full or relative path.
 
 
 INSTALLATION
@@ -133,10 +132,10 @@ EXAMPLES
 }
 [ "$#" = 0 ] && tool_help && exit 0;
 
-### Error function ###
+## Error function ##
 throw_error () { [ "$1" != "" ] && echo "$FN: error: $1"; exit 1; }
 
-### Parse input arguments ###
+## Parse input arguments ##
 OPTS=( run );
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -151,7 +150,7 @@ done
 
 [ "$#" -lt 2 ] &&
   echo "Error: not enough input arguments." &&
-  echo "Usage: $FN [OPTIONS] -- DOCKER_IMAGE ( COMMAND ARGUMENTS | bash | --help )" &&
+  echo "Usage: $FN [OPTIONS] -- DOCKER_IMAGE ( COMMAND ARGUMENTS | bash | sh | --help )" &&
   exit 1;
 
 IMAGE="$1";
@@ -163,25 +162,29 @@ CMD=("${CMD[@]//$SQ/$SQ\"$SQ\"$SQ}");
 CMD=("${CMD[@]/#/$SQ}");
 CMD=("${CMD[@]/%/$SQ}");
 
-### Prepare options for docker ###
+## Prepare options for docker ##
 OPTS+=( --user "$RUN_USER" );
 OPTS+=( --rm );
 OPTS+=( --workdir "$(pwd)" );
 OPTS+=( --interactive );
 OPTS+=( --log-driver none );
-if ! ( [ "${#CMD[@]}" = 1 ] && [ "${CMD[0]}" = "'bash'" ] ); then
+if ! ( [ "${#CMD[@]}" = 1 ] && ( [ "${CMD[0]}" = "'bash'" ] || [ "${CMD[0]}" = "'sh'" ] ) ); then
   OPTS+=( --env TERM=xterm-256color );
 fi
-OPTS+=( --entrypoint bash );
+OPTS+=( --entrypoint sh );
 [ -d "/Users" ] && OPTS+=( -v /Users:/Users );
 [ -d "/home" ]  && OPTS+=( -v /home:/home );
 [ -d "/mnt" ]   && OPTS+=( -v /mnt:/mnt );
 [ -d "/media" ] && OPTS+=( -v /media:/media );
 [ -d "/tmp" ]   && OPTS+=( -v /tmp:/tmp );
 
-[ "$DPATH" != "" ] && DPATH="PATH=\"$DPATH:\$PATH\" ";
+if [ -z "${DPATH+x}" ]; then
+  DPATH="";
+else
+  DPATH="PATH=\"$DPATH:\$PATH\" ";
+fi
 
-### Run docker ###
+## Run docker ##
 if [ "${#CMD[@]}" = 1 ] && [ "${CMD[0]}" = "'bash'" ]; then
   [ "$DPATH" != "" ] && DPATH="export $DPATH;";
   TMP=$(mktemp $FN.init_XXXXXX);
@@ -198,7 +201,10 @@ if [ "${#CMD[@]}" = 1 ] && [ "${CMD[0]}" = "'bash'" ]; then
     rm $TMP;
     " > $TMP;
   CMD=( docker "${OPTS[@]}" -t "$IMAGE" \
-    --init-file $TMP );
+    -c "bash --init-file $TMP" );
+elif [ "${#CMD[@]}" = 1 ] && [ "${CMD[0]}" = "'sh'" ]; then
+  CMD=( docker "${OPTS[@]}" -t "$IMAGE" \
+    -c "$DPATH${CMD[*]}" );
 else
   CMD=( docker "${OPTS[@]}" "$IMAGE" \
     -c "$DPATH${CMD[*]}" );

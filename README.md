@@ -1,5 +1,5 @@
 
-Version: 2019.09.17
+Version: 2019.09.25
 
 DESCRIPTION
 ===========
@@ -24,8 +24,8 @@ DESCRIPTION
 
   The interface can also be used to execute external scripts inside the
   container. For this to work, the script must be located in a directory
-  accessible to the container (see above) and be in your $DPATH environment
-  variable or be referenced with its full or relative path.
+  accessible to the container (see above) and be in a directory in your $DPATH
+  environment variable or be referenced with its full or relative path.
 
 
 INSTALLATION
