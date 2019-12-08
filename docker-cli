@@ -1,14 +1,14 @@
 #!/bin/bash
 
 ##
-## @version $Version: 2019.09.25$
+## @version $Version: 2019.12.08$
 ## @author Mauricio Villegas <mauricio@omnius.com>
 ## @copyright Copyright(c) 2018-present, Mauricio Villegas <mauricio@omnius.com>
 ## @license MIT License
 ##
 
 FN="${0##*/}";
-VERSION="Version: 2019.09.25";
+VERSION="Version: 2019.12.08";
 
 ## When script is sourced, only enable bash completion by reusing the one from docker ##
 if [ "${BASH_SOURCE[0]}" != "$0" ]; then
@@ -28,7 +28,9 @@ fi
 
 set -u;
 
-GID=$(id -G | awk -v dg=$(stat -c "%g" .) '{ id=$1; for(n=2;n<=NF;n++) if($n==dg) id=dg; print id; }');
+DGID=$(stat -c "%g" . 2>/dev/null);
+[ "$?" != 0 ] && DGID=$(stat -f "%g" .);
+GID=$(id -G | awk -v dg=$DGID '{ id=$1; for(n=2;n<=NF;n++) if($n==dg) id=dg; print id; }');
 RUN_USER=$(id -u):$GID;
 
 ## Tool usage message ##
