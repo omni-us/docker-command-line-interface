@@ -1,5 +1,5 @@
 
-Version: 2019.12.08
+Version: 2020.04.24
 
 DESCRIPTION
 ===========
@@ -67,6 +67,9 @@ OPTIONS
     --runtime=DOCKER_RUNTIME  (e.g. nvidia)
     --ipc=DOCKER_IPC          (e.g. host)
     --publish=LIST            (e.g. 8080:8080)
+    --cli-debug               Prints the docker run command right before execution.
+    --help                    Prints this help message and exits.
+    --version                 Prints the version of docker-cli and exits.
 
   In general most of the options that docker run accepts should work. For more
   details check docker run --help.

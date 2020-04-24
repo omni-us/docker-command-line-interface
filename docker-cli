@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 
 ##
-## @version $Version: 2019.12.08$
+## @version $Version: 2020.04.24$
 ## @author Mauricio Villegas <mauricio@omnius.com>
 ## @copyright Copyright(c) 2018-present, Mauricio Villegas <mauricio@omnius.com>
 ## @license MIT License
 ##
 
 FN="${0##*/}";
-VERSION="Version: 2019.12.08";
+VERSION="Version: 2020.04.24";
 
 ## When script is sourced, only enable bash completion by reusing the one from docker ##
 if [ "${BASH_SOURCE[0]}" != "$0" ]; then
@@ -32,6 +32,7 @@ DGID=$(stat -c "%g" . 2>/dev/null);
 [ "$?" != 0 ] && DGID=$(stat -f "%g" .);
 GID=$(id -G | awk -v dg=$DGID '{ id=$1; for(n=2;n<=NF;n++) if($n==dg) id=dg; print id; }');
 RUN_USER=$(id -u):$GID;
+CLI_DEBUG="no";
 
 ## Tool usage message ##
 tool_help () {
@@ -104,6 +105,9 @@ OPTIONS
     --runtime=DOCKER_RUNTIME  (e.g. nvidia)
     --ipc=DOCKER_IPC          (e.g. host)
     --publish=LIST            (e.g. 8080:8080)
+    --cli-debug               Prints the docker run command right before execution.
+    --help                    Prints this help message and exits.
+    --version                 Prints the version of $FN and exits.
 
   In general most of the options that docker run accepts should work. For more
   details check docker run --help.
@@ -141,6 +145,7 @@ throw_error () { [ "$1" != "" ] && echo "$FN: error: $1"; exit 1; }
 OPTS=( run );
 while [ "$#" -gt 0 ]; do
   case "$1" in
+    --cli-debug )   CLI_DEBUG="yes";              ;;
     --version )     echo ${VERSION#* };   exit 0; ;;
     -h | --help )   tool_help;            exit 0; ;;
     -u | --user )   RUN_USER="$2";         shift; ;;
@@ -212,4 +217,9 @@ else
     -c "$DPATH${CMD[*]}" );
 fi
 
+if [ "$CLI_DEBUG" = "yes" ]; then
+  CLI_DEBUG=("${CMD[@]}");
+  CLI_DEBUG[-1]="\"${CLI_DEBUG[-1]}\"";
+  echo "$FN: running command: ${CLI_DEBUG[@]}";
+fi
 "${CMD[@]}";
