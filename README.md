@@ -1,5 +1,5 @@
 
-Version: 2020.04.24
+Version: 2020.06.11
 
 DESCRIPTION
 ===========
@@ -64,7 +64,7 @@ OPTIONS
 =======
 
     --user UID:GID            (default: current user and current directory's group)
-    --runtime=DOCKER_RUNTIME  (e.g. nvidia)
+    --gpus=GPUS               (e.g. all)
     --ipc=DOCKER_IPC          (e.g. host)
     --publish=LIST            (e.g. 8080:8080)
     --cli-debug               Prints the docker run command right before execution.
@@ -90,7 +90,8 @@ EXAMPLES
     rm test.txt
 
     # Use of nvidia GPU in container
-    docker-cli --runtime=nvidia -- nvidia/cuda:10.1-runtime-ubuntu16.04 nvidia-smi
+    docker-cli --runtime=nvidia -- nvidia/cuda:10.1-runtime-ubuntu16.04 nvidia-smi  # old format
+    docker-cli --gpus=all -- nvidia/cuda:10.1-runtime-ubuntu16.04 nvidia-smi
 
     # Run a jupyter notebook in container
     docker-cli --publish=8888:8888 -- DOCKER_IMAGE bash
