@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 
 ##
-## @version $Version: 2020.06.11$
+## @version $Version: 2020.07.11$
 ## @author Mauricio Villegas <mauricio@omnius.com>
 ## @copyright Copyright(c) 2018-present, Mauricio Villegas <mauricio@omnius.com>
 ## @license MIT License
 ##
 
 FN="${0##*/}";
-VERSION="Version: 2020.06.11";
+VERSION="Version: 2020.07.11";
 
 ## When script is sourced, only enable bash completion by reusing the one from docker ##
 if [ "${BASH_SOURCE[0]}" != "$0" ]; then
@@ -32,6 +32,7 @@ DGID=$(stat -c "%g" . 2>/dev/null);
 [ "$?" != 0 ] && DGID=$(stat -f "%g" .);
 GID=$(id -G | awk -v dg=$DGID '{ id=$1; for(n=2;n<=NF;n++) if($n==dg) id=dg; print id; }');
 RUN_USER=$(id -u):$GID;
+ADD_UID="";
 CLI_DEBUG="no";
 
 ## Tool usage message ##
@@ -101,6 +102,7 @@ SYNOPSIS
 OPTIONS
 =======
 
+    --add-uid                 Run add_uid_to_passwd at startup.
     --user UID:GID            (default: current user and current directory's group)
     --gpus=GPUS               (e.g. all)
     --ipc=DOCKER_IPC          (e.g. host)
@@ -146,6 +148,7 @@ throw_error () { [ "$1" != "" ] && echo "$FN: error: $1"; exit 1; }
 OPTS=( run );
 while [ "$#" -gt 0 ]; do
   case "$1" in
+    --add-uid )     ADD_UID="yes";                ;;
     --cli-debug )   CLI_DEBUG="yes";              ;;
     --version )     echo ${VERSION#* };   exit 0; ;;
     -h | --help )   tool_help;            exit 0; ;;
@@ -186,6 +189,16 @@ OPTS+=( --entrypoint sh );
 [ -d "/media" ] && OPTS+=( -v /media:/media );
 [ -d "/tmp" ]   && OPTS+=( -v /tmp:/tmp );
 
+if [ "$ADD_UID" = "yes" ]; then
+  [ $(docker volume ls -q -f name=add_uid_to_passwd | wc -l) = 0 ] &&
+    docker run \
+      --rm \
+      --mount source=add_uid_to_passwd,destination=/opt/ops/ \
+      -it omniushq/add_uid_to_passwd:1.1.1;
+  ADD_UID="/opt/ops/add_uid_to_passwd $(id -u -n);";
+  OPTS+=( --mount source=add_uid_to_passwd,destination=/opt/ops/ );
+fi
+
 if [ -z "${DPATH+x}" ]; then
   DPATH="";
 else
@@ -199,6 +212,7 @@ if [ "${#CMD[@]}" = 1 ] && [ "${CMD[0]}" = "'bash'" ]; then
   _rm_init_tmp () { rm -f "$TMP"; };
   trap _rm_init_tmp EXIT;
   echo "
+    $ADD_UID
     $DPATH
     if [ \$(id -u) = 0 ]; then
       PS1='root@\h# ';
@@ -212,10 +226,10 @@ if [ "${#CMD[@]}" = 1 ] && [ "${CMD[0]}" = "'bash'" ]; then
     -c "bash --init-file $TMP" );
 elif [ "${#CMD[@]}" = 1 ] && [ "${CMD[0]}" = "'sh'" ]; then
   CMD=( docker "${OPTS[@]}" -t "$IMAGE" \
-    -c "$DPATH${CMD[*]}" );
+    -c "$ADD_UID$DPATH${CMD[*]}" );
 else
   CMD=( docker "${OPTS[@]}" "$IMAGE" \
-    -c "$DPATH${CMD[*]}" );
+    -c "$ADD_UID$DPATH${CMD[*]}" );
 fi
 
 if [ "$CLI_DEBUG" = "yes" ]; then
