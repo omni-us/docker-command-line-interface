@@ -1,5 +1,5 @@
 
-Version: 2020.07.11
+Version: 2020.09.23
 
 DESCRIPTION
 ===========
@@ -64,6 +64,7 @@ OPTIONS
 =======
 
     --add-uid                 Run add_uid_to_passwd at startup.
+    --tmp-home                Create /tmp/HOME directory and set HOME=/tmp/HOME.
     --user UID:GID            (default: current user and current directory's group)
     --gpus=GPUS               (e.g. all)
     --ipc=DOCKER_IPC          (e.g. host)

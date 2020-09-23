@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 
 ##
-## @version $Version: 2020.07.11$
+## @version $Version: 2020.09.23$
 ## @author Mauricio Villegas <mauricio@omnius.com>
 ## @copyright Copyright(c) 2018-present, Mauricio Villegas <mauricio@omnius.com>
 ## @license MIT License
 ##
 
 FN="${0##*/}";
-VERSION="Version: 2020.07.11";
+VERSION="Version: 2020.09.23";
 
 ## When script is sourced, only enable bash completion by reusing the one from docker ##
 if [ "${BASH_SOURCE[0]}" != "$0" ]; then
@@ -33,6 +33,7 @@ DGID=$(stat -c "%g" . 2>/dev/null);
 GID=$(id -G | awk -v dg=$DGID '{ id=$1; for(n=2;n<=NF;n++) if($n==dg) id=dg; print id; }');
 RUN_USER=$(id -u):$GID;
 ADD_UID="";
+TMP_HOME="";
 CLI_DEBUG="no";
 
 ## Tool usage message ##
@@ -103,6 +104,7 @@ OPTIONS
 =======
 
     --add-uid                 Run add_uid_to_passwd at startup.
+    --tmp-home                Create /tmp/HOME directory and set HOME=/tmp/HOME.
     --user UID:GID            (default: current user and current directory's group)
     --gpus=GPUS               (e.g. all)
     --ipc=DOCKER_IPC          (e.g. host)
@@ -149,6 +151,7 @@ OPTS=( run );
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --add-uid )     ADD_UID="yes";                ;;
+    --tmp-home )    TMP_HOME="yes";               ;;
     --cli-debug )   CLI_DEBUG="yes";              ;;
     --version )     echo ${VERSION#* };   exit 0; ;;
     -h | --help )   tool_help;            exit 0; ;;
@@ -197,6 +200,11 @@ if [ "$ADD_UID" = "yes" ]; then
       -it omniushq/add_uid_to_passwd:1.1.1;
   ADD_UID="/opt/ops/add_uid_to_passwd $(id -u -n);";
   OPTS+=( --mount source=add_uid_to_passwd,destination=/opt/ops/ );
+fi
+
+if [ "$TMP_HOME" = "yes" ]; then
+  mkdir -p /tmp/HOME;
+  OPTS+=( -e HOME=/tmp/HOME );
 fi
 
 if [ -z "${DPATH+x}" ]; then
