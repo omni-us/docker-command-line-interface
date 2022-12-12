@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 
 ##
-## @version $Version: 2020.09.23$
+## @version $Version: 2022.12.12$
 ## @author Mauricio Villegas <mauricio@omnius.com>
 ## @copyright Copyright(c) 2018-present, Mauricio Villegas <mauricio@omnius.com>
 ## @license MIT License
 ##
 
 FN="${0##*/}";
-VERSION="Version: 2020.09.23";
+VERSION="Version: 2022.12.12";
 
 ## When script is sourced, only enable bash completion by reusing the one from docker ##
 if [ "${BASH_SOURCE[0]}" != "$0" ]; then
@@ -202,9 +202,11 @@ if [ "$ADD_UID" = "yes" ]; then
   OPTS+=( --mount source=add_uid_to_passwd,destination=/opt/ops/ );
 fi
 
+TPATH="";
 if [ "$TMP_HOME" = "yes" ]; then
   mkdir -p /tmp/HOME;
   OPTS+=( -e HOME=/tmp/HOME );
+  TPATH='PATH="/tmp/HOME/.local/bin:$PATH";';
 fi
 
 if [ -z "${DPATH+x}" ]; then
@@ -222,6 +224,7 @@ if [ "${#CMD[@]}" = 1 ] && [ "${CMD[0]}" = "'bash'" ]; then
   echo "
     $ADD_UID
     $DPATH
+    $TPATH
     if [ \$(id -u) = 0 ]; then
       PS1='root@\h# ';
     else
